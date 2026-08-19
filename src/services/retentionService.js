@@ -1,6 +1,7 @@
 const { db, admin } = require('../config/firebase');
 
 const BATCH_SIZE = 500;
+const EVENTS_COLLECTION = "events";
 
 async function deleteOldEventsInCollection(collectionRef, cutoff) {
   let totalDeleted = 0;
@@ -27,11 +28,12 @@ async function deleteOldEventsInCollection(collectionRef, cutoff) {
 
 async function deleteExpiredEvents(retentionDays) {
   const cutoff = admin.firestore.Timestamp.fromMillis(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
-  const collections = await db.listCollections();
+  const appDocs = await db.collection(EVENTS_COLLECTION).listDocuments();
 
   const deleted = {};
-  for (const collectionRef of collections) {
-    deleted[collectionRef.id] = await deleteOldEventsInCollection(collectionRef, cutoff);
+  for (const appDoc of appDocs) {
+    const collectionRef = appDoc.collection(EVENTS_COLLECTION);
+    deleted[appDoc.id] = await deleteOldEventsInCollection(collectionRef, cutoff);
   }
 
   return deleted;

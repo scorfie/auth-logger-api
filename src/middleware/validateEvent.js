@@ -18,7 +18,7 @@ function validateEvent(req, res, next) {
   if (typeof body.app === 'string') {
     const app = body.app.trim();
     if (app === '.' || app === '..' || /^__.*__$/.test(app)) {
-      errors.push('"app" is not a valid collection name');
+      errors.push('"app" is not a valid document name');
     } else if (app.length > 200) {
       errors.push('"app" must be 200 characters or fewer');
     }

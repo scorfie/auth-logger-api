@@ -10,7 +10,7 @@ module.exports = {
     '/events': {
       post: {
         summary: 'Save a mobile app event',
-        description: 'Validates and persists a mobile app event to Firestore. Events are stored in a collection named after the "app" field (e.g. "AuthCortex"), so each app gets its own collection.',
+        description: 'Validates and persists a mobile app event to Firestore. Events are stored under the "logs" collection, in a document named after the "app" field (e.g. "AuthCortex"), inside a "logs" subcollection.',
         requestBody: {
           required: true,
           content: {
@@ -67,10 +67,37 @@ module.exports = {
         },
       },
     },
+    '/apps': {
+      get: {
+        summary: 'List apps',
+        description: 'Returns the app IDs (document names under the "events" collection) that have logged at least one event.',
+        responses: {
+          200: {
+            description: 'List of apps',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    apps: { type: 'array', items: { type: 'string' } },
+                    count: { type: 'integer' },
+                  },
+                },
+                example: { apps: ['AuthCortex', 'ExampleApp'], count: 2 },
+              },
+            },
+          },
+          500: {
+            description: 'Server error while listing apps',
+            content: { 'application/json': { schema: { type: 'object', properties: { error: { type: 'string' } } } } },
+          },
+        },
+      },
+    },
     '/events/{app}': {
       get: {
         summary: 'List events for an app',
-        description: 'Returns events from the Firestore collection named after "app", newest first.',
+        description: 'Returns events from the "logs" subcollection under the "logs/{app}" document, newest first.',
         parameters: [
           { name: 'app', in: 'path', required: true, schema: { type: 'string' }, example: 'AuthCortex' },
           { name: 'severity', in: 'query', schema: { type: 'string', enum: ['debug', 'info', 'warning', 'error', 'critical'] } },
@@ -121,7 +148,7 @@ module.exports = {
     '/admin/retention/run': {
       post: {
         summary: 'Manually trigger deletion of expired events',
-        description: 'Deletes events older than the retention window across all app collections. Requires the "x-admin-key" header to match ADMIN_API_KEY.',
+        description: 'Deletes events older than the retention window across all app documents in the "logs" collection. Requires the "x-admin-key" header to match ADMIN_API_KEY.',
         parameters: [
           { name: 'days', in: 'query', description: 'Override the retention window in days', schema: { type: 'integer' } },
           { name: 'x-admin-key', in: 'header', required: true, schema: { type: 'string' } },
@@ -135,7 +162,7 @@ module.exports = {
                   type: 'object',
                   properties: {
                     retentionDays: { type: 'integer' },
-                    deleted: { type: 'object', additionalProperties: { type: 'integer' }, description: 'Documents deleted per app collection' },
+                    deleted: { type: 'object', additionalProperties: { type: 'integer' }, description: 'Documents deleted per app (logs/{app}/logs)' },
                   },
                 },
                 example: { retentionDays: 30, deleted: { AuthCortex: 42 } },
@@ -155,7 +182,7 @@ module.exports = {
         required: ['platform', 'app', 'appVersion', 'message'],
         properties: {
           platform: { type: 'string', enum: ['ios', 'android'], description: 'Mobile platform' },
-          app: { type: 'string', description: 'App name; also used as the Firestore collection name events are stored under' },
+          app: { type: 'string', description: 'App name; used as the document ID under the "logs" collection (logs/{app}/logs/{eventId})' },
           appVersion: { type: 'string', description: 'App version' },
           osVersion: { type: 'string', nullable: true, description: 'Device OS version' },
           device: { type: 'string', nullable: true, description: 'Device model identifier' },

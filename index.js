@@ -1,11 +1,14 @@
 require('dotenv').config();
 
+const http = require('http');
 const express = require('express');
 const cors = require('cors');
+const { Server } = require('socket.io');
 const eventsRouter = require('./src/routes/events');
 const adminRouter = require('./src/routes/admin');
 const openapiSpec = require('./src/config/openapi');
 const scheduleRetentionJob = require('./src/jobs/retentionJob');
+const initRealtime = require('./src/realtime/eventsRealtime');
 
 async function main() {
   const { apiReference } = await import('@scalar/express-api-reference');
@@ -33,10 +36,15 @@ async function main() {
 
   scheduleRetentionJob();
 
+  const server = http.createServer(app);
+  const io = new Server(server, { cors: { origin: '*' } });
+  initRealtime(io);
+
   const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log(`AuthLoggerSDK-API listening on port ${PORT}`);
     console.log(`API docs available at http://localhost:${PORT}/reference`);
+    console.log(`Realtime updates available over Socket.IO at the same origin`);
   });
 }
 

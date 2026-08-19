@@ -1,7 +1,7 @@
 const { db, admin } = require('../config/firebase');
+const { EVENTS_COLLECTION } = require("../utils/firestoreEvents");
 
 const BATCH_SIZE = 500;
-const EVENTS_COLLECTION = "events";
 
 async function deleteOldEventsInCollection(collectionRef, cutoff) {
   let totalDeleted = 0;
